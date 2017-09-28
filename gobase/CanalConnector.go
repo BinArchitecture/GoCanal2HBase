@@ -35,6 +35,14 @@ type Message struct {
 	entries []*canal_entry.Entry
 }
 
+func (self *Message) GetId() int64{
+	return self.id
+}
+
+func (self *Message) GetEntries() []*canal_entry.Entry{
+	return self.entries
+}
+
 type ClientIdentity struct {
 	destination string
 	clientId    int16
