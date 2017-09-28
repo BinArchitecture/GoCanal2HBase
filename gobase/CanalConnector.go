@@ -8,6 +8,7 @@ import (
 	"time"
 	"github.com/BinArchitecture/GoCanal2HBase/com_alibaba_otter_canal_protocol/canal"
 	"github.com/golang/protobuf/proto"
+	"strconv"
 )
 
 type CanalConnector struct {
@@ -116,6 +117,88 @@ func (self *CanalConnector) Connect() (err error) {
 	return nil
 }
 
+func (self *CanalConnector) Subscribe(filter string) error{
+	pty:=com_alibaba_otter_canal_protocol.PacketType_SUBSCRIPTION
+	return self.subunsub(filter,&pty)
+}
+
+func (self *CanalConnector) subunsub(filter string,sutype *com_alibaba_otter_canal_protocol.PacketType) error{
+	sub:=new(com_alibaba_otter_canal_protocol.Sub)
+	sub.Destination=proto.String(self.clientIdentity.destination)
+	sub.ClientId=proto.String(strconv.Itoa(int(self.clientIdentity.clientId)))
+	if filter!=""{
+		sub.Filter=proto.String(filter)
+	}
+	p:=new(com_alibaba_otter_canal_protocol.Packet)
+	p.Type=sutype
+	p.Body,_=proto.Marshal(sub)
+	by,_:=proto.Marshal(p)
+	err:=self.writeWithHeader(by)
+	if err!=nil{
+		glog.Error(err)
+		return err
+	}
+	bb,err:=self.readNextPacket()
+	if err!=nil{
+		glog.Error(err)
+		return err
+	}
+	p=new(com_alibaba_otter_canal_protocol.Packet)
+	proto.Unmarshal(bb,p)
+	ack:=new(com_alibaba_otter_canal_protocol.Ack)
+	proto.Unmarshal(p.GetBody(),ack)
+	if ack.ErrorCode!=nil{
+		code:=int(*ack.ErrorCode)
+		if code>0{
+			str:="failed to subscribe with reason: "
+			str+=ack.GetErrorMessage()
+			panic(str)
+		}
+	}
+	if filter!=""{
+		self.clientIdentity.filter=filter
+	}
+	return nil
+}
+
+func (self *CanalConnector) Unsubscribe() error{
+	pty:=com_alibaba_otter_canal_protocol.PacketType_UNSUBSCRIPTION
+	return self.subunsub("",&pty)
+}
+
+func (self *CanalConnector) Disconnect() error{
+	if self.rollbackOnDisConnect && self.connected{
+		err:=self.Rollback()
+		if err!=nil{
+			glog.Error(err)
+			return err
+		}
+	}
+	self.connected = false
+	if self.conn.conn!=nil{
+		self.conn.conn.Close()
+	}
+	return nil
+}
+
+func (self *CanalConnector) Rollback() error{
+	ca:=new(com_alibaba_otter_canal_protocol.ClientRollback)
+	ca.ClientId=proto.String(strconv.Itoa(int(self.clientIdentity.clientId)))
+	ca.BatchId=proto.Int64(0)
+	ca.Destination=proto.String(self.clientIdentity.destination)
+	p:=new(com_alibaba_otter_canal_protocol.Packet)
+	pty:=com_alibaba_otter_canal_protocol.PacketType_CLIENTROLLBACK
+	p.Type=&pty
+	p.Body,_=proto.Marshal(ca)
+	by,_:=proto.Marshal(p)
+	err:=self.writeWithHeader(by)
+	if err!=nil{
+		glog.Error(err)
+		return err
+	}
+	return nil
+}
+
 func (self *CanalConnector) writeWithHeader(body []byte) error {
 	self.writeDataLock.Lock()
 	defer self.writeDataLock.Unlock()
@@ -140,7 +223,7 @@ func (self *CanalConnector) readNextPacket() ([]byte, error) {
 	size:=1024
 	b := make([]byte, size)
 	for{
-		self.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		self.conn.SetReadDeadline(time.Now().Add(300 * time.Second))
 		n, err := self.conn.Read(b)
 		if err != nil {
 			glog.Error(err, self.addr)
