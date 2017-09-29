@@ -1,4 +1,4 @@
-package gobase
+package _select
 
 import (
 	"bytes"
