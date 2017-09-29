@@ -4,13 +4,6 @@ import (
 	"sync"
 )
 
-const (//StageType
-	SELE   = "SELECT"
-	EXTR  = "EXTRACT"
-	TRNS = "TRANSFORM"
-	LOAD      = "LOAD"
-)
-
 type StageAggregationCollector struct{
 	collector *sync.Map //Map<Long, Map<StageType, StageAggregation>>
 	profiling bool
