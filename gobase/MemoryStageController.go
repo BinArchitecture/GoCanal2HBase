@@ -76,19 +76,19 @@ func (self *MemoryStageController) Termin(terminType string){
 		da:=value.(*StageProgress)
 		eventData:=da.data
 		data:=new(TerminEventData)
-		data.proceEvdata.processId=processId
-		data.proceEvdata.pipelineId=self.pipelineId
-		data.terminType=terminType
-		data.code="channel"
-		data.desc=terminType
+		data.ProceEvdata.ProcessId =processId
+		data.ProceEvdata.PipelineId =self.pipelineId
+		data.TerminType =terminType
+		data.Code ="channel"
+		data.Desc =terminType
 		if eventData!=nil{
-			data.proceEvdata.batchId=eventData.proceEvdata.batchId
-			data.currNid=int64(eventData.currNid)
-			data.proceEvdata.startTime=eventData.proceEvdata.startTime
-			data.proceEvdata.endTime=eventData.proceEvdata.endTime
-			data.proceEvdata.firstTime=eventData.proceEvdata.firstTime
-			data.proceEvdata.number=eventData.proceEvdata.number
-			data.proceEvdata.size=eventData.proceEvdata.size
+			data.ProceEvdata.BatchId =eventData.ProceEvdata.BatchId
+			data.CurrNid =int64(eventData.CurrNid)
+			data.ProceEvdata.StartTime =eventData.ProceEvdata.StartTime
+			data.ProceEvdata.EndTime =eventData.ProceEvdata.EndTime
+			data.ProceEvdata.FirstTime =eventData.ProceEvdata.FirstTime
+			data.ProceEvdata.Number =eventData.ProceEvdata.Number
+			data.ProceEvdata.Size =eventData.ProceEvdata.Size
 		}
 		self.termins<-data
 		self.progress.Delete(processId)
@@ -107,7 +107,7 @@ func (self *MemoryStageController) Single(stageType string,etlEventData *EtlEven
 	case TRNS:
 		result=handleSingle(self, etlEventData, stageType,LOAD)
 	case LOAD:
-		self.progress.Delete(etlEventData.proceEvdata.processId)
+		self.progress.Delete(etlEventData.ProceEvdata.ProcessId)
 		//Object removed = progress.remove(etlEventData.getProcessId());
 		//// 并不是立即触发，通知下一个最小的一个process启动
 		//computeNextLoad();
@@ -122,17 +122,17 @@ func (self *MemoryStageController) Single(stageType string,etlEventData *EtlEven
 
 func handleSingle(self *MemoryStageController, etlEventData *EtlEventData, stageType string,nextStageType string) (result bool) {
 	result=false
-	_, ok := self.progress.Load(etlEventData.proceEvdata.processId)
+	_, ok := self.progress.Load(etlEventData.ProceEvdata.ProcessId)
 	if ok {
 		stageProgress := new(StageProgress)
 		stageProgress.data = etlEventData
 		stageProgress.stageType = stageType
-		self.progress.Store(etlEventData.proceEvdata.processId, stageProgress)
+		self.progress.Store(etlEventData.ProceEvdata.ProcessId, stageProgress)
 		if nextStageType!=LOAD{
 			tmq, ok := self.replys.Load(nextStageType)
 			if ok {
 				extr := tmq.(chan int64)
-				extr <- etlEventData.proceEvdata.processId
+				extr <- etlEventData.ProceEvdata.ProcessId
 				result = true
 			}
 		}else{

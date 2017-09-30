@@ -17,6 +17,12 @@ type RowDataPipeDelegate struct {
 	RowDataRpcPipe *RowDataRpcPipe
 }
 
+func NewRowDataPipeDelegate() *RowDataPipeDelegate{
+	delegate:=new(RowDataPipeDelegate)
+	delegate.rowDataMemoryPipe=newRowDataMemoryPipe()
+	return delegate
+}
+
 type MemoryPipeKey struct {
 	identity *Identity
 	time int64
@@ -35,7 +41,7 @@ type RowDataMemoryPipe struct {
 	retry int
 }
 
-func NewRowDataMemoryPipe() *RowDataMemoryPipe{
+func newRowDataMemoryPipe() *RowDataMemoryPipe{
 	pipe:=new(RowDataMemoryPipe)
 	pipe.cache=new(sync.Map)
 	pipe.timeout=60000

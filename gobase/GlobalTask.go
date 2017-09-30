@@ -8,16 +8,27 @@ const (//StageType
 )
 
 type GlobalTask struct {
-	Running bool
-	PipelineId int64
 	ArbitrateEventService *ArbitrateEventService
 	RowDataPipeDelegate *RowDataPipeDelegate
 	StageAggregationCollector *StageAggregationCollector
+	ConfigClientService *ConfigClientService
+	ArbitrateFactory *ArbitrateFactory
 }
 
-func NewGlobalTask(pipelineId int64) *GlobalTask{
+func NewGlobalTask() *GlobalTask{
 	task:=new(GlobalTask)
-	task.PipelineId=pipelineId
+	arbitrateService:=NewArbitrateEventService(task)
+	task.ArbitrateEventService=arbitrateService
+	rowDelegate:=NewRowDataPipeDelegate()
+	task.RowDataPipeDelegate=rowDelegate
+	stageCollector:=NewStageAggregationCollector()
+	task.StageAggregationCollector=stageCollector
+	configService:=NewConfigClientService()
+	task.ConfigClientService=configService
+	task.ArbitrateFactory=NewArbitrateFactory()
 	return task
+}
+
+func (self *GlobalTask) Shutdown(){
 }
 
